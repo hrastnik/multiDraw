@@ -1,5 +1,5 @@
 # multiDraw
-Minimal multi user drawing board built with Socket.io and node.js. Written in ~100 lines of code
+Minimal multi user drawing board built with Socket.io and node.js. Written in less than 100 lines of code
 
 
 # Installation
