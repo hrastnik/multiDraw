@@ -9,7 +9,7 @@ Minimal multi user drawing board built with Socket.io and node.js. Written in le
 
 Install node.js and run
 
-    node multiDraw.js
+    node index.js
 
 Here it is in action...
 
