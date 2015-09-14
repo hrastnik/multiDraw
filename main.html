@@ -1,0 +1,61 @@
+<html> 
+    <head> 
+        <script src="https://cdn.socket.io/socket.io-1.3.5.js"></script>
+        <script>
+        
+        socket = io();
+        
+        function getCoordsFromEvent(mouseEvent) {
+            return (mouseEvent.pageX - cvs.offsetLeft) + "," + (mouseEvent.pageY - cvs.offsetTop); 
+        }
+        
+        function getCoordsFromMsg(msg) {
+            splitCoords = msg.split(',');
+            return {
+                "x":parseInt(splitCoords[0]),
+                "y":parseInt(splitCoords[1])
+            };
+        }
+        
+        function startEmittingMovement(e) {
+            var coords = getCoordsFromEvent(e);
+            socket.emit('m', coords);
+        }
+        
+        function onLoadCallback () {
+            cvs = document.getElementById('cvs');
+            ctx = cvs.getContext("2d");
+            
+            socket.on('d', function(msg) {
+                var coords = getCoordsFromMsg(msg);
+                ctx.beginPath();
+                ctx.moveTo(coords.x, coords.y);
+                ctx.stroke();
+                cvs.addEventListener('mousemove', startEmittingMovement);
+            });
+            
+            socket.on('m', function(msg) {
+                var coords = getCoordsFromMsg(msg);
+                ctx.lineTo(coords.x, coords.y);
+                ctx.stroke();
+            });
+            
+            socket.on('u', function(msg) {
+                cvs.removeEventListener('mousemove', startEmittingMovement);
+            });
+            
+            cvs.addEventListener("mousedown", function(e) {
+                var coords = getCoordsFromEvent(e);
+                socket.emit('d', coords);
+            });
+            cvs.addEventListener("mouseup", function(e) {
+                var coords = getCoordsFromEvent(e);
+                socket.emit('u', coords);
+            });
+        }
+        </script>
+    </head> 
+    <body onload="onLoadCallback()"> 
+    <canvas id="cvs" height="600" width="800" style="background:red;"> </canvas>
+    </body> 
+</html>
