@@ -5,52 +5,51 @@
         
         socket = io();
         
-        function getCoordsFromEvent(mouseEvent) {
-            return (mouseEvent.pageX - cvs.offsetLeft) + "," + (mouseEvent.pageY - cvs.offsetTop); 
-        }
-        
-        function getCoordsFromMsg(msg) {
-            splitCoords = msg.split(',');
-            return {
-                "x":parseInt(splitCoords[0]),
-                "y":parseInt(splitCoords[1])
-            };
-        }
-        
         function startEmittingMovement(e) {
-            var coords = getCoordsFromEvent(e);
-            socket.emit('m', coords);
+            ctx.lineTo((e.pageX - cvs.offsetLeft),(e.pageY - cvs.offsetTop));
+            ctx.stroke();
+            socket.emit('m', line_id+","+(e.pageX - cvs.offsetLeft)+","+(e.pageY - cvs.offsetTop));
         }
+        
+        drawObject = {};
         
         function onLoadCallback () {
             cvs = document.getElementById('cvs');
             ctx = cvs.getContext("2d");
-            
-            socket.on('d', function(msg) {
-                var coords = getCoordsFromMsg(msg);
-                ctx.beginPath();
-                ctx.moveTo(coords.x, coords.y);
-                ctx.stroke();
-                cvs.addEventListener('mousemove', startEmittingMovement);
-            });
+            line_id  = "";
+            mouseDown = false;
             
             socket.on('m', function(msg) {
-                var coords = getCoordsFromMsg(msg);
-                ctx.lineTo(coords.x, coords.y);
-                ctx.stroke();
+                var splitCoords = msg.split(',');
+                var id = splitCoords[0];
+                var x = parseInt(splitCoords[1]);
+                var y = parseInt(splitCoords[2]);
+                if (typeof (drawObject[id]) == 'undefined') drawObject[id] = new Array();
+                drawObject[id].push([x, y]);
             });
             
-            socket.on('u', function(msg) {
-                cvs.removeEventListener('mousemove', startEmittingMovement);
+            socket.on('s', function(line_id) {
+                while (mouseDown) continue; // wait for user to release mouse
+                ctx.beginPath();
+                ctx.moveTo(drawObject[line_id][0][0], drawObject[line_id][0][1]);
+                for (var i = 1;i < drawObject[line_id].length;i++) {
+                    ctx.lineTo(drawObject[line_id][i][0], drawObject[line_id][i][1]);
+                }
+                ctx.stroke();
+                delete drawObject[line_id];
             });
             
             cvs.addEventListener("mousedown", function(e) {
-                var coords = getCoordsFromEvent(e);
-                socket.emit('d', coords);
+                line_id = Math.random().toString(36).substr(2,5); // generate new line id
+                mouseDown = true;
+                ctx.beginPath();
+                ctx.moveTo((e.pageX - cvs.offsetLeft),(e.pageY - cvs.offsetTop));
+                cvs.addEventListener("mousemove", startEmittingMovement);
             });
             cvs.addEventListener("mouseup", function(e) {
-                var coords = getCoordsFromEvent(e);
-                socket.emit('u', coords);
+                mouseDown = false;
+                cvs.removeEventListener("mousemove", startEmittingMovement);
+                socket.emit('s', line_id); // stop line
             });
         }
         </script>
