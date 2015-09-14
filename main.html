@@ -17,12 +17,14 @@
             cvs = document.getElementById('cvs');
             ctx = cvs.getContext("2d");
             mouseDown = false;
+            line_color = "#"+Math.random().toString(16).substring(2,8);
             
             socket.on('s', function(line) {lines_to_draw.push(line);}); // Push recieved line in lines_to_draw
             
             cvs.addEventListener("mousedown", function(e) {
                 mouseDown = true;
                 line_coords = [[(e.pageX - cvs.offsetLeft),(e.pageY - cvs.offsetTop)]]; // Starting coords for new line
+                ctx.strokeStyle = line_color;
                 ctx.beginPath(); // Start drawing locally
                 ctx.moveTo((e.pageX - cvs.offsetLeft),(e.pageY - cvs.offsetTop));
                 cvs.addEventListener("mousemove", startSavingLineCoords); // Start saving coords and drawing
@@ -30,17 +32,18 @@
             cvs.addEventListener("mouseup", function(e) {
                 mouseDown = false;
                 cvs.removeEventListener("mousemove", startSavingLineCoords); // Stop saving local line coords
-                socket.emit('s', line_coords.join(',')); // send line
+                socket.emit('s', line_color+","+line_coords.join(',')); // send line
             });
             
             setInterval(function() { // Every 500 ms draw all lines in lines_to_draw
                 if (mouseDown) return; // wait for user to stop drawing line
                 while (lines_to_draw.length > 0) { // Draw all lines in lines_to_draw
                     var line_str = lines_to_draw.pop();
-                    var new_line = line_str.split(','); // new_line is in format x1,y1,x2,y2,x3,y3...
+                    var new_line = line_str.split(','); // new_line is in format color,x1,y1,x2,y2,x3,y3...
+                    ctx.strokeStyle = new_line[0]; // Color
                     ctx.beginPath();
-                    ctx.moveTo(new_line[0], new_line[1]);
-                    for (var i = 2;i < new_line.length;i+=2) {
+                    ctx.moveTo(new_line[1], new_line[2]);
+                    for (var i = 3;i < new_line.length;i+=2) {
                         ctx.lineTo(new_line[i], new_line[i+1]);
                     }
                     ctx.stroke();
