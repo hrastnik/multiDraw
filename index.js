@@ -12,8 +12,7 @@ app.get('/', function(req, res) {
 });
 
 io.on("connection", function(s) {
-    s.on('m', function(msg) {s.broadcast.emit('m', msg);});
-    s.on('s', function(line_id) {s.broadcast.emit('s', line_id);});
+    s.on('s', function(line_coords) {s.broadcast.emit('s', line_coords);});
 });
 
 http.listen(app.get('port'));

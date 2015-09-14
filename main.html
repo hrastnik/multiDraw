@@ -3,54 +3,49 @@
         <script src="https://cdn.socket.io/socket.io-1.3.5.js"></script>
         <script>
         
-        socket = io();
+        socket = io(); // Initialize Socket.io
+        lines_to_draw = []; // Array of recieved lines to draw
+        line_coords = []; // Array of local lines to be sent
         
-        function startEmittingMovement(e) {
-            ctx.lineTo((e.pageX - cvs.offsetLeft),(e.pageY - cvs.offsetTop));
+        function startSavingLineCoords(e) {
+            ctx.lineTo((e.pageX - cvs.offsetLeft),(e.pageY - cvs.offsetTop)); // Draw line locally
             ctx.stroke();
-            socket.emit('m', line_id+","+(e.pageX - cvs.offsetLeft)+","+(e.pageY - cvs.offsetTop));
+            line_coords.push([(e.pageX - cvs.offsetLeft),(e.pageY - cvs.offsetTop)]); // Add coords to be sent
         }
-        
-        drawObject = {};
         
         function onLoadCallback () {
             cvs = document.getElementById('cvs');
             ctx = cvs.getContext("2d");
-            line_id  = "";
             mouseDown = false;
             
-            socket.on('m', function(msg) {
-                var splitCoords = msg.split(',');
-                var id = splitCoords[0];
-                var x = parseInt(splitCoords[1]);
-                var y = parseInt(splitCoords[2]);
-                if (typeof (drawObject[id]) == 'undefined') drawObject[id] = new Array();
-                drawObject[id].push([x, y]);
-            });
-            
-            socket.on('s', function(line_id) {
-                while (mouseDown) continue; // wait for user to release mouse
-                ctx.beginPath();
-                ctx.moveTo(drawObject[line_id][0][0], drawObject[line_id][0][1]);
-                for (var i = 1;i < drawObject[line_id].length;i++) {
-                    ctx.lineTo(drawObject[line_id][i][0], drawObject[line_id][i][1]);
-                }
-                ctx.stroke();
-                delete drawObject[line_id];
-            });
+            socket.on('s', function(line) {lines_to_draw.push(line);}); // Push recieved line in lines_to_draw
             
             cvs.addEventListener("mousedown", function(e) {
-                line_id = Math.random().toString(36).substr(2,5); // generate new line id
                 mouseDown = true;
-                ctx.beginPath();
+                line_coords = [[(e.pageX - cvs.offsetLeft),(e.pageY - cvs.offsetTop)]]; // Starting coords for new line
+                ctx.beginPath(); // Start drawing locally
                 ctx.moveTo((e.pageX - cvs.offsetLeft),(e.pageY - cvs.offsetTop));
-                cvs.addEventListener("mousemove", startEmittingMovement);
+                cvs.addEventListener("mousemove", startSavingLineCoords); // Start saving coords and drawing
             });
             cvs.addEventListener("mouseup", function(e) {
                 mouseDown = false;
-                cvs.removeEventListener("mousemove", startEmittingMovement);
-                socket.emit('s', line_id); // stop line
+                cvs.removeEventListener("mousemove", startSavingLineCoords); // Stop saving local line coords
+                socket.emit('s', line_coords.join(',')); // send line
             });
+            
+            setInterval(function() { // Every 500 ms draw all lines in lines_to_draw
+                if (mouseDown) return; // wait for user to stop drawing line
+                while (lines_to_draw.length > 0) { // Draw all lines in lines_to_draw
+                    var line_str = lines_to_draw.pop();
+                    var new_line = line_str.split(','); // new_line is in format x1,y1,x2,y2,x3,y3...
+                    ctx.beginPath();
+                    ctx.moveTo(new_line[0], new_line[1]);
+                    for (var i = 2;i < new_line.length;i+=2) {
+                        ctx.lineTo(new_line[i], new_line[i+1]);
+                    }
+                    ctx.stroke();
+                }
+            }, 500);
         }
         </script>
     </head> 
